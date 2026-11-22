@@ -2,7 +2,7 @@
 
 Ứng dụng web chạy ngay trên trình duyệt (một file `index.html`, không cần máy chủ) để nhập một lần dữ liệu hồ sơ đất đai và xuất các biểu mẫu Word: thừa kế, hồ sơ đất đai, niêm yết GCN, xử phạt VPHC và **chuyển mục đích sử dụng đất (Tờ trình, Quyết định)**.
 
-Phiên bản hiện tại: **v1.7.0**
+Phiên bản hiện tại: **v1.8.1**
 
 ## Đưa lên GitHub Pages (dùng chung cho nhiều máy)
 
@@ -41,6 +41,17 @@ Lưu ý:
 - Chữ viết tay (nhất là ghi chú biến động ở mục IV của GCN) và ảnh mờ đọc kém – luôn đối chiếu bản gốc. Scan từ 200 dpi trở lên cho kết quả tốt hơn.
 - Có thể dùng nút **Dán kết quả đọc (JSON)** để nạp kết quả đã trích bằng công cụ khác.
 
+## OCR không chạy được – cách xử lý
+
+Bấm **🩺 Kiểm tra kết nối OCR** (tab Tệp & trích xuất). App thử tải từng tệp OCR từ 4 nguồn (thư mục `ocr/` của app, jsDelivr, unpkg, cdnjs/projectnaptha) và báo nguồn nào được, nguồn nào bị chặn. App tự dùng nguồn nào chạy được. Nếu mạng của xã chặn mọi nguồn CDN, đặt 4 tệp sau vào thư mục `ocr/` ngay cạnh `index.html` trong kho GitHub (tải về từ máy có Internet rồi tải lên):
+
+- `tesseract.min.js` – https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js
+- `worker.min.js` – https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js
+- `tesseract-core-simd-lstm.wasm.js` (và `tesseract-core-lstm.wasm.js` cho máy cũ) – https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/
+- `vie.traineddata.gz` – https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int/vie.traineddata.gz
+
+(Tên tệp có thể khác theo phiên bản – dùng nút kiểm tra để xác nhận app tìm thấy tệp.) Khi OCR lỗi, app hiện nguyên văn lỗi của từng nguồn; chép nội dung đó (hoặc kết quả bảng kiểm tra kết nối) để được hỗ trợ.
+
 ## Sự cố thường gặp
 
 | Hiện tượng | Cách xử lý |
@@ -51,6 +62,9 @@ Lưu ý:
 | Mất hồ sơ | Dữ liệu nằm trong trình duyệt – khôi phục bằng file `.json` đã sao lưu. |
 
 ## Ghi chú phiên bản
+
+- **v1.8.1**: OCR thử nhiều nguồn (thư mục `ocr/`, jsDelivr, unpkg, cdnjs), hiện lỗi thật của từng nguồn, thêm nút kiểm tra kết nối OCR; tự thử chế độ không dùng bộ nhớ đệm.
+- **v1.8.0**: bộ đọc hồ sơ chịu được lỗi OCR (nhãn gần đúng, bám mã [NN] của tờ khai, bỏ chữ rác); chuẩn hóa loại đất theo danh mục (không còn chép chữ OCR lỗi vào văn bản); thêm trường GCN (số vào sổ, cơ quan cấp, diện tích/mục đích/địa chỉ ghi trên GCN, tờ bản đồ cũ, số trích đo, vị trí thửa) và điện thoại; đọc tỷ lệ sở hữu; ưu tiên dữ liệu QR/CCCD; hộp duyệt hiện cảnh báo từng trường; tab Chuyển mục đích hỏi lại trước khi xuất nếu thiếu hoặc loại đất không hợp lệ; chẩn đoán rõ khi OCR chưa chạy.
 
 - **v1.7.0**: đọc toàn bộ hồ sơ, nhận dạng theo loại giấy tờ, bảng đối chiếu, chẩn đoán chữ đọc được, dán kết quả JSON.
 - **v1.6.0**: thêm tab Chuyển mục đích (Tờ trình, Quyết định) và cảnh báo số liệu; căn cứ có Quyết định 91/2026 và 135/2026/QĐ-UBND.

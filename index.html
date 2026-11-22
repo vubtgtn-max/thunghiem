@@ -37309,10 +37309,10 @@ function cmPeople(c){return byRole(c,"nsd").filter(p=>(p.hoTen||"").trim())}
 function cmVars(c,own){const Q=pickQ(c,own),D=parcelDerived(Q),ps=cmPeople(c),p0=ps[0]||{};
   const nm=p=>{const n=(p.hoTen||"").trim();return n&&n===n.toUpperCase()?n.toLowerCase().replace(/(^|\s)(\S)/g,(m,a,b)=>a+b.toUpperCase()):n};
   const ppl=cp=>{if(!ps.length)return(cp?"Ông":"ông")+" …";const s=list2(ps.map(p=>(gtNorm(p.gt)==="Bà"?"bà":"ông")+" "+nm(p)));return cp?cmCap(s):s};
-  const rows=D.rows,rw=rows.find(r=>!/đất ở/i.test(r.ten))||rows[0]||{},lh=(own.loai_truoc||rw.ten||"").toLowerCase().trim()||"…";
+  const rows=D.rows,rw=rows.find(r=>!/đất ở/i.test(r.ten))||rows[0]||{},lc=canonLand(own.loai_truoc||rw.ten||""),lh=(lc.ok?lc.v:(own.loai_truoc||rw.ten||"")).toLowerCase().trim()||"…";
   const ls=own.loai_sau||"đất ở tại nông thôn",dc=own.dc_ghi||addrP(p0)||"…";
   const hs=own.han_sd||((Q.thoiHan||rw.th||"").match(/\d{1,2}\/\d{1,2}\/\d{4}/)||[""])[0],gn=dtp(Q.gcnNgay);
-  const gc=Q.gcn?`, đã được cấp Giấy chứng nhận số ${Q.gcn}${gn.d?` ngày ${+gn.d}/${+gn.m}/${gn.y}`:""} cho ${ppl(0)}${own.ty_le?` (tỷ lệ ${own.ty_le})`:""}${hs?`, thời hạn sử dụng đất đến ngày ${hs}`:""}`:", đã có Giấy chứng nhận quyền sử dụng đất";
+  const gc=Q.gcn?`, đã được cấp Giấy chứng nhận số ${Q.gcn}${Q.vaoSo?`, số vào sổ ${Q.vaoSo}`:""}${Q.gcnCq?` do ${Q.gcnCq} cấp`:""}${gn.d?` ngày ${+gn.d}/${+gn.m}/${gn.y}`:""} cho ${ppl(0)}${own.ty_le?` (tỷ lệ ${own.ty_le})`:""}${hs?`, thời hạn sử dụng đất đến ngày ${hs}`:""}`:", đã có Giấy chứng nhận quyền sử dụng đất";
   const ts=cmNum(own.tt_so,"/TTr-KT"),tn=cmNum(own.tl_so,"/TL-KT"),qs=cmNum(own.qd_so,"/QĐ-UBND"),tt=dtp(own.tt),f2=v=>v||"…";
   return{PPL0:ppl(0),PPL1:ppl(1),THUA:f2(Q.thua),TO:f2(Q.to),DT:f2(D.tong),DTC:f2((own.dt_chuyen||"").trim()),LH:lh,LH_C:cmCap(lh),LS:ls,LS_C:cmCap(ls),
    DIACHI:dc,DIACHI_U:cmCap(dc),DIACHI_C:dc+(own.dc_cu?` (${own.dc_cu})`:""),GCNCL:gc,
@@ -37321,7 +37321,7 @@ function cmVars(c,own){const Q=pickQ(c,own),D=parcelDerived(Q),ps=cmPeople(c),p0
    TL_SO:" "+(tn||"     /TL-KT"),TL_NGAY:cmNgay(own.tl)}}
 function cmMissing(c,own){const Q=pickQ(c,own),D=parcelDerived(Q),m=[];
   if(!cmPeople(c).length)m.push("Người sử dụng đất (tab Data)");if(!Q.to)m.push("Tờ bản đồ");if(!Q.thua)m.push("Thửa đất số");
-  if(!D.tong)m.push("Diện tích thửa");if(!(own.dt_chuyen||"").trim())m.push("Diện tích chuyển mục đích");if(!(own.loai_truoc||D.rows.length))m.push("Loại đất trước chuyển");return m}
+  if(!D.tong)m.push("Diện tích thửa");if(!(own.dt_chuyen||"").trim())m.push("Diện tích chuyển mục đích");if(!canonLand(own.loai_truoc||((D.rows.find(r=>!/đất ở/i.test(r.ten))||D.rows[0]||{}).ten)||"").ok)m.push("Loại đất trước chuyển (trống hoặc chưa khớp danh mục – kiểm tra)");return m}
 function cmChecks(c,own){const Q=pickQ(c,own),D=parcelDerived(Q),dt=num(D.tong),dc=num(own.dt_chuyen),hl=num(own.hanh_lang),w=[],ps=cmPeople(c);
   if(dt&&dc>dt)w.push("Diện tích chuyển lớn hơn diện tích thửa.");
   if(dt&&dc&&hl&&dt-hl<dc)w.push(`Phần thửa ngoài hành lang (${fm(dt-hl)} m²) nhỏ hơn diện tích chuyển.`);
@@ -37337,7 +37337,7 @@ async function cmMake(k,x0,own){const x=Object.assign({},x0,{NGAYDAI:cmNgay(k===
   xml=xml.replace(/\{\{(\w+)\}\}/g,(m,q)=>q in x?esx(x[q]):m);z.file("word/document.xml",xml);return z.generateAsync({type:"uint8array",compression:"DEFLATE"})}
 async function cmRun(k,c,own){if(COLLECT&&!(own.dt_chuyen||"").trim())return;const ps=cmPeople(c);
   if(!ps.length){toast("Chưa có người sử dụng đất – nhập ở tab Data.");return}
-  const x=cmVars(c,own),keys=k==="all"?["ttr","qd"]:[k],nm=noDau(ps[0].hoTen);
+  const x=cmVars(c,own),keys=k==="all"?["ttr","qd"]:[k],nm=noDau(ps[0].hoTen);{const mm=cmMissing(c,own);if(mm.length&&!COLLECT&&!(await ask("Còn thiếu hoặc chưa hợp lệ:\n• "+mm.join("\n• ")+"\n\nVẫn xuất file?")))return}
   const ok=await bundle(keys.map(q=>[`${CMN[q]}_${nm}.docx`,cmMake(q,x,own)]),`Chuyen_muc_dich_${nm}.zip`);
   if(ok){const m=cmMissing(c,own);toast(m.length?"Đã tạo xong. Còn thiếu: "+m.join(", ")+".":"Đã tạo xong.")}}
 const TAB_CM={key:"chuyenmd",mode:"cm",pickers:pickers("nsd").filter(p=>p.k==="parcelId"),sections:CMF,
@@ -37582,23 +37582,45 @@ function pgText(content){let s="",y=null;for(const it of content.items){const yy
 /* ---- lấy trang từ tệp: văn bản (nếu PDF có lớp chữ), ảnh trang (để OCR), mã QR ---- */
 async function pagesOf(rec,say,out,qrs){const nm=rec.name;
   if(/pdf/i.test(rec.type)||/\.pdf$/i.test(nm)){say(`Đang mở ${nm}…`);await needPdfJs();const doc=await pdfjsLib.getDocument({data:await rec.blob.arrayBuffer()}).promise,N=Math.min(doc.numPages,40);
-    for(let i=1;i<=N;i++){say(`${nm}: tách trang ${i}/${N}…`);const pg=await doc.getPage(i),tx=pgText(await pg.getTextContent()),vp=pg.getViewport({scale:2}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
+    for(let i=1;i<=N;i++){say(`${nm}: tách trang ${i}/${N}…`);const pg=await doc.getPage(i),tx=pgText(await pg.getTextContent()),vp=pg.getViewport({scale:tx.replace(/\s/g,"").length>=40?1.5:2.8}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
       await pg.render({canvasContext:cv.getContext("2d",{willReadFrequently:true}),viewport:vp}).promise;
       const hasT=tx.replace(/\s/g,"").length>=40;if(!hasT&&blankCv(cv))continue;
       try{for(const q of await qrScan(cv)){const r=parseQR(q);if(r)qrs.push(r.f)}}catch(e){}
       out.push({file:nm,n:i,text:hasT?tx:"",cv:hasT?null:cv,ocr:false})}}
   else{say(`Đang mở ${nm}…`);let bm;try{bm=await createImageBitmap(rec.blob)}catch(e){throw new Error("Không mở được ảnh "+nm+" (nên dùng JPG/PNG hoặc PDF; ảnh HEIC cần đổi sang JPG)")}
     const cv=bmCanvas(bm);if(blankCv(cv))return;try{for(const q of await qrFromBitmap(bm)){const r=parseQR(q);if(r)qrs.push(r.f)}}catch(e){}out.push({file:nm,n:1,text:"",cv,ocr:false})}}
-/* ---- OCR một lần cho mọi trang chưa có chữ; tự thử xoay 90°/270°/180° khi nhận dạng kém ---- */
+/* ---- OCR v1.8.1: thử nhiều nguồn, báo lỗi thật, kiểm tra kết nối ---- */
+const OCR_SRC=[
+ {n:"Thư mục ocr/ của app",local:1,lib:"./ocr/tesseract.min.js",worker:"./ocr/worker.min.js",core:"./ocr",lang:"./ocr"},
+ {n:"jsDelivr",lib:OCRJS,worker:"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",core:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0",lang:"https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int"},
+ {n:"unpkg",lib:"https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js",worker:"https://unpkg.com/tesseract.js@5.1.1/dist/worker.min.js",core:"https://unpkg.com/tesseract.js-core@5.1.0",lang:"https://unpkg.com/@tesseract.js-data/vie@1.0.0/4.0.0_best_int"},
+ {n:"cdnjs + projectnaptha",lib:CDN+"tesseract.js/5.1.1/tesseract.min.js",worker:CDN+"tesseract.js/5.1.1/worker.min.js",core:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0",lang:"https://tessdata.projectnaptha.com/4.0.0_best_int"}];
+const withTO=(p,ms,msg)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(msg||"quá thời gian chờ")),ms))]);
+async function ocrWorker(say,logger){const errs=[];
+  for(const S of OCR_SRC){
+    if(S.local){try{const r=await withTO(fetch(S.lang+"/vie.traineddata.gz",{method:"HEAD",cache:"no-store"}),6000);if(!r.ok)continue}catch(e){continue}}
+    for(const extra of [{},{cacheMethod:"none"}]){
+      try{say(`Đang tải bộ OCR (${S.n}${extra.cacheMethod?", không dùng bộ nhớ đệm":""})… lần đầu hơi lâu`);
+        if(!(S.local&&window.Tesseract)&&(!window.Tesseract||S.local))await withTO(loadJS(S.lib),45000,"tải tesseract.js quá 45 giây");
+        if(!window.Tesseract)throw new Error("không có Tesseract sau khi tải");
+        const w=await withTO(Tesseract.createWorker("vie",1,Object.assign({workerPath:S.worker,corePath:S.core,langPath:S.lang,logger},extra)),120000,"khởi tạo OCR quá 120 giây");
+        return w}
+      catch(e){errs.push(`${S.n}${extra.cacheMethod?" (không đệm)":""}: ${(e&&e.message)||e}`)}}}
+  const err=new Error("Không khởi tạo được OCR từ bất kỳ nguồn nào:\n• "+errs.join("\n• "));err.detail=errs;throw err}
+async function ocrCheck(){const rows=[],env=[`Địa chỉ trang: ${location.origin}`,`Trang giới thiệu (referrer): ${document.referrer||"(trống)"}`,`Nhận là khung Claude: ${IN_CLAUDE?"CÓ":"không"}`,`Hỗ trợ Worker: ${typeof Worker!=="undefined"?"có":"KHÔNG"} · Mạng: ${navigator.onLine?"đang online":"OFFLINE"}`,`Trình duyệt: ${navigator.userAgent}`];
+  for(const S of OCR_SRC){for(const [n,u] of [["tesseract.min.js",S.lib],["worker",S.worker],["lõi OCR (simd)",S.core+"/tesseract-core-simd-lstm.wasm.js"],["dữ liệu tiếng Việt",S.lang+"/vie.traineddata.gz"]]){
+      const t0=performance.now();let st="";try{const r=await withTO(fetch(u,{method:"HEAD",cache:"no-store"}),15000,"quá 15 giây");st=r.ok?"OK":"HTTP "+r.status}catch(e){st="LỖI: "+((e&&e.message)||e)}
+      rows.push([S.n,n,st,Math.round(performance.now()-t0)])}}
+  return{env,rows}}
 async function ocrPages(pages,say){const need=pages.filter(p=>!p.text&&p.cv);if(!need.length)return 0;
-  if(IN_CLAUDE)throw new Error("Đang mở trong khung xem trước của Claude – khung này chặn OCR. Hãy dùng app trên GitHub Pages hoặc mở index.html từ máy.");
-  await loadJS(OCRJS);say("Đang tải dữ liệu tiếng Việt cho OCR (lần đầu hơi lâu)…");
-  const LP="https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int";let cur="";
-  const w=await Tesseract.createWorker("vie",1,{langPath:LP,logger:m=>{if(m.status==="recognizing text")say(`OCR ${cur}… ${Math.round(m.progress*100)}%`)}});let k=0;
-  try{for(const p of need){k++;cur=`trang ${k}/${need.length}`;let best=(await w.recognize(p.cv)).data.text,sc=kwScore(best);
+  if(IN_CLAUDE)throw new Error("Trang đang bị nhận là mở từ Claude (địa chỉ hoặc trang giới thiệu có chữ “claude”) nên OCR bị tắt. Hãy mở app trực tiếp bằng đường dẫn GitHub (gõ vào thanh địa chỉ, không bấm từ khung chat).");
+  let cur="";const w=await ocrWorker(say,m=>{if(m.status==="recognizing text")say(`OCR ${cur}… ${Math.round(m.progress*100)}%`)});let k=0;
+  try{try{await w.setParameters({tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"})}catch(e){}
+    for(const p of need){k++;cur=`trang ${k}/${need.length}`;let best=(await w.recognize(p.cv)).data.text,sc=kwScore(best);
       if(sc<2&&best.replace(/\s/g,"").length>20){for(const deg of[90,270,180]){cur=`trang ${k}/${need.length} (xoay ${deg}°)`;const t=(await w.recognize(rotCv(p.cv,deg))).data.text,s=kwScore(t);if(s>sc){best=t;sc=s}if(sc>=3)break}}
-      p.text=best;p.ocr=true}}finally{await w.terminate()}
+      p.text=best;p.ocr=true}}finally{try{await w.terminate()}catch(e){}}
   return need.length}
+
 /* ---- nhận dạng loại giấy tờ ---- */
 const XK={tsdd:[["to khai tien su dung dat",3],["tien su dung dat",1],["dien tich nop tien",1]],
  lptb:[["to khai le phi truoc ba",3],["le phi truoc ba",2],["dac diem nha dat",1],["nguoi nop thue",1]],
@@ -37608,6 +37630,8 @@ const XK={tsdd:[["to khai tien su dung dat",3],["tien su dung dat",1],["dien tic
  cccd:[["can cuoc cong dan",3],["citizen identity",3],["dac diem nhan dang",1],["noi thuong tru",1]]};
 function xtClass(t,prev){const n=fold(t),nc=n.replace(/[^a-z0-9]/g,""),has=k=>n.includes(k)||nc.includes(k.replace(/[^a-z0-9]/g,""));let best="khac",bs=2;
   for(const [k,L] of Object.entries(XK)){const sc=L.reduce((s,[w,v])=>s+(has(w)?v:0),0);if(sc>bs){bs=sc;best=k}}
+  if(best==="khac"&&n.replace(/\s/g,"").length>60){/* chữ OCR lỗi: so khớp gần đúng */
+    for(const [k,L] of Object.entries(XK)){const sc=L.reduce((s,[w,v])=>s+(has(w)?v:(w.length>=8&&fzFind(n,w)?v:0)),0);if(sc>bs){bs=sc;best=k}}}
   if(best!=="khac")return best;
   if(prev&&["lptb","pnn","tsdd"].includes(prev)&&/\[\d|cam doan|dong chu so huu|mien, giam/.test(n))return prev;
   return"khac"}
@@ -37621,41 +37645,100 @@ const NG2="([^\\n]+(?:\\n(?!\\s*(?:\\d\\.|[a-z]\\)|-|\\[|truong))[^\\n]+)?)";
 const clean=s=>String(s||"").replace(/[\s.,;:]+$/,"").replace(/^[\s.,;:]+/,"").trim();
 const gtOf=s=>/^ba\b/i.test(fold(s))?"Bà":/^ong\b/i.test(fold(s))?"Ông":"";
 const stripGt=s=>String(s||"").replace(/^\s*(?:ông|bà|hộ ông|hộ bà)\s+/i,"").trim();
-function tyleRows(t,f){t=t.replace(/\|/g," ");f=f.replace(/\|/g," ");const out=[];const re=/^\s*(?:0?\d)\s+(.+?)\s+(\d{12})\s+(\d{1,3})\s*%?\s*$/gmd;let m;const g=new RegExp(re.source,re.flags);
-  while((m=g.exec(f))){out.push({ten:t.slice(m.indices[1][0],m.indices[1][1]).replace(/\s+/g," ").trim(),cccd:m[2],tyle:m[3]+"%"})}return out}
-function parseDon(t){const f=xf(t),o={nguoi:[]};let m;const re=/(?:^|[\s\n])(?:\d\.\d\.?\s*)?(ong|ba)\s+([a-z][a-z ]{2,40}?)\s*,\s*sinh\s*nam\s*:?\s*(\d{4})/gd,g=new RegExp(re.source,re.flags);
-  while((m=g.exec(f)))o.nguoi.push({gt:m[1]==="ba"?"Bà":"Ông",ten:t.normalize("NFC").slice(m.indices[2][0],m.indices[2][1]).trim(),namsinh:m[3]});
-  const cc=[],rc=/(?:cccd|can cuoc|cmnd)[^\d\n]{0,14}(\d{9,12})[^\n]{0,40}?cap\s*ngay\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*?noi\s*cap\s*:?\s*([^\n]+)/gd,gc=new RegExp(rc.source,rc.flags);
-  while((m=gc.exec(f)))cc.push({cccd:m[1],ngaycap:dmyN(m[2]),noicap:clean(t.normalize("NFC").slice(m.indices[3][0],m.indices[3][1]))});
-  cc.forEach((c,i)=>{if(!o.nguoi[i])o.nguoi[i]={};Object.assign(o.nguoi[i],c)});
-  const tn=t.normalize("NFC");o.thuongtru=clean(V(tn,f,/dia chi\s*\/?\s*tru so chinh\s*:?\s*([^\n]+)/));
-  o.ngay=dateWords(f);o.dt_thua=clean(V(tn,f,/dien tich dat\s*\(m\s*[2²]\)\s*:?\s*([\d.,]+)/));
-  o.dt_chuyen=clean(V(tn,f,/\(?\s*([\d.,]+)\s*m\s*[2²]?\s*dat o\b/));o.muc_dich=clean(V(tn,f,/su dung vao muc dich\d?\s*:?\s*([^\n]+)/));
-  return o}
-function parseGcn(t){const tn=t.normalize("NFC"),f=xf(tn),o={};
-  o.so=V(tn,f,/\b([a-z]{1,2}\s?\d{6})\b/).replace(/\s+/g," ").toUpperCase();
-  o.thua=V(tn,f,/thua dat so\s*:?\s*(\d{1,5})/);o.to=V(tn,f,/to ban do so\s*:?\s*(\d{1,4})/);
-  o.dt=clean(V(tn,f,/dien tich\s*:?\s*([\d.,]+)\s*m/));o.loaidat=clean(V(tn,f,/muc dich su dung\s*:?\s*([^\n]+)/));
-  const hs=V(tn,f,/thoi han su dung\s*:?\s*([^\n]+)/);o.hanSD=dateWords(xf(hs),hs)||dmyN(hs)||clean(hs);
-  o.nguongoc=clean(V(tn,f,new RegExp("nguon goc su dung\\s*:?\\s*"+NG2)));
-  o.diachi_cu=clean(V(tn,f,/\bdia chi\b\s*:\s*([^\n]+)/));
+/* ---- v1.8: nhận dạng chịu lỗi OCR (nhãn gần đúng, mã [NN], danh mục loại đất, cắt chữ rác) ---- */
+function lev(a,b,max){const n=a.length,m=b.length;if(Math.abs(n-m)>max)return max+1;let prev=new Array(m+1),cur=new Array(m+1);for(let j=0;j<=m;j++)prev[j]=j;
+  for(let i=1;i<=n;i++){cur[0]=i;let mn=cur[0];for(let j=1;j<=m;j++){const c=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1;cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c);if(cur[j]<mn)mn=cur[j]}if(mn>max)return max+1;const t=prev;prev=cur;cur=t}return prev[m]}
+function fzFind(f,label,from){from=from||0;const L=label.length,md=L<9?1:Math.min(5,Math.ceil(L*.25));let best=null;
+  for(let i=from;i<=f.length-L+md;i++){if(i>0&&/[a-z0-9]/.test(f[i-1]))continue;if(!/[a-z0-9]/.test(f[i]))continue;
+    for(let w=L-md;w<=L+md;w++){if(i+w>f.length)break;const d=lev(f.substr(i,w),label,md);if(d<=md&&(!best||d<best.d)){best={i,end:i+w,d};if(d===0){best.end=extWord(f,best.end);return best}}}}
+  if(best)best.end=extWord(f,best.end);return best}
+const extWord=(f,e)=>{while(e<f.length&&/[a-z0-9]/.test(f[e])&&e>0&&/[a-z0-9]/.test(f[e-1]))e++;return e};
+const JUNKRE=/[\[\]|_=~<>¥©®™•§¶]|\.\s*\.|\s{3,}/;
+function trimJunk(s){s=String(s==null?"":s).replace(/[\u2018\u2019`´]/g,"'").trim();const i=s.search(JUNKRE);if(i>=0)s=s.slice(0,i);
+  const tk=s.split(/\s+/);while(tk.length&&(!/[A-Za-zÀ-ỹ0-9]/.test(tk[tk.length-1])||(tk.length>3&&/^[^\dA-ZÀ-Ỹ]{1,2}$/.test(tk[tk.length-1])&&!/^(?:xã|và|va|ở|o|số|so|tờ|to|tp|đ|d|a|b|c)$/i.test(tk[tk.length-1]))))tk.pop();
+  return tk.join(" ").replace(/[\s.,;:·'"]+$/,"").replace(/^[\s.,;:·'"\-–)\]]+/,"").trim()}
+function valAfter(t,f,end,o){o=o||{};let s=t.slice(end,end+(o.span||420));
+  const P=/^[\s.\-–:;,'‘’"\]\)]*/;s=s.replace(P,"");s=s.replace(/^\([^)]{0,230}\)/,"");s=s.replace(P,"");
+  {const m0=/^([^:\n\d]{0,32}):/.exec(s);if(m0&&!/^\s*$/.test(s.slice(m0[0].length,m0[0].length+3)))s=s.slice(m0[0].length).replace(P,"")}
+  const L=s.split("\n");let v=L[0];if(!trimJunk(v)&&L.length>1)v=L[1],L.shift();
+  v=trimJunk(v);
+  if(o.cont){let k=1;const raw0=L[0]||"";while(k<=o.cont&&L[k]!==undefined&&trimJunk(L[k])&&!/^\s*(?:\d+\s*[.)]|[a-zđ]\)|\[|-|\(|truong\s*h|\d{1,2}\/)/i.test(fold(L[k]))&&!/[.]\s*$/.test(raw0.trim().replace(/\s[^\sA-Za-zÀ-ỹ0-9.]+.*$/,""))){v+=" "+trimJunk(L[k]);k++}}
+  return clean(v)}
+function lbl(t,f,label,o){const r=fzFind(f,label,(o&&o.from)||0);return r?valAfter(t,f,r.end,o):""}
+function lblIdx(f,label,from){return fzFind(f,label,from||0)}
+const numM=s=>{const m=/(\d[\d.,]*\d|\d)\s*m/.exec(String(s||""));return m?m[1].replace(/[.,]$/,""):firstNum(s)};
+const firstNum=s=>{const m=/(\d[\d.,]*\d|\d)/.exec(String(s||"").replace(/(\d)\s+([.,])\s*(\d)/g,"$1$2$3"));return m?m[1].replace(/[.,]$/,""):""};
+const dateIn=s=>{const m=/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4})/.exec(String(s||""));return m?`${+m[1]}/${+m[2]}/${m[3]}`:""};
+const LANDS=["Đất trồng lúa","Đất chuyên trồng lúa nước","Đất trồng cây hằng năm khác","Đất trồng cây lâu năm","Đất rừng sản xuất","Đất rừng phòng hộ","Đất rừng đặc dụng","Đất nuôi trồng thủy sản","Đất nông nghiệp khác","Đất ở tại nông thôn","Đất ở tại đô thị","Đất ở","Đất thương mại, dịch vụ","Đất cơ sở sản xuất phi nông nghiệp","Đất chăn nuôi tập trung","Đất làm muối"];
+const LCODE={cln:"Đất trồng cây lâu năm",luc:"Đất chuyên trồng lúa nước",lua:"Đất trồng lúa",bhk:"Đất trồng cây hằng năm khác",rsx:"Đất rừng sản xuất",nts:"Đất nuôi trồng thủy sản",ont:"Đất ở tại nông thôn",odt:"Đất ở tại đô thị",nkh:"Đất nông nghiệp khác"};
+const cmpk=s=>fold(s).replace(/[^a-z0-9]/g,"");
+function canonLand(raw){const r=cmpk(raw);if(!r)return{v:"",ok:false,raw:""};if(LCODE[r])return{v:LCODE[r],ok:true,raw};
+  const C=LANDS.map(n=>({n,k:cmpk(n)}));const ex=C.filter(x=>r===x.k||r.startsWith(x.k)).sort((a,b)=>b.k.length-a.k.length)[0];if(ex&&(ex.k.length>=6||r===ex.k))return{v:ex.n,ok:true,raw};
+  const sc=C.map(x=>{const b=lev(r,x.k,99);return{n:x.n,s:1-b/Math.max(x.k.length,r.length,4)}}).sort((a,b)=>b.s-a.s);
+  if(sc[0].s>=.66&&sc[0].s-(sc[1]?sc[1].s:0)>=.08)return{v:sc[0].n,ok:true,raw,fuzzy:true};return{v:clean(raw),ok:false,raw}}
+const LANDW=t=>{const c=canonLand(t);return c};
+/* mã trường [NN] của tờ khai: giá trị sau dấu hai chấm cùng dòng */
+function codeVal(t,f,code,o){const re=new RegExp("[\\[\\(]\\s*"+code.replace(".","\\.")+"\\s*[\\]\\)]");const m=re.exec(f);if(!m)return"";
+  const st=m.index+m[0].length;let e=t.indexOf("\n",st);if(e<0)e=t.length;let line=t.slice(st,e);const k=line.indexOf(":");let v=k>=0&&k<90?line.slice(k+1):line;
+  if(!v.trim()&&(o&&o.next)){let e2=t.indexOf("\n",e+1);if(e2<0)e2=t.length;v=t.slice(e+1,e2)}
+  return(o&&o.raw)?v:trimJunk(v)}
+function dongRows(t){const out=[];t=t.replace(/\r/g,"");t.split("\n").forEach(l=>{const m=/(\d{12})/.exec(l);if(!m)return;if(/dinh danh|ho chieu|so dinh|cccd|dien thoai|can cuoc/.test(fold(l)))return;const before=l.slice(0,m.index).replace(/[|\[\]()'‘’_=~—–-]+/g," ").replace(/\d+/g," ").trim();
+    const after=l.slice(m.index+12),pm=/(\d{1,3})\s*%?\s*[|)\]]*\s*$/.exec(after.replace(/[|\[\]]/g," "));
+    let nm=before.replace(/(\p{Ll})(\p{Lu})/gu,"$1 $2").split(/\s+/).filter(Boolean);if(nm.length>2&&/^(?:o|oi|ol|l|i|0\d?)$/i.test(nm[0]))nm.shift();
+    out.push({ten:nm.join(" "),cccd:m[1],tyle:pm?pm[1]+"%":""})});return out}
+function parseDon(t){t=t.normalize("NFC");const f=fold(t),o={nguoi:[],warn:[]};
+  const reP=/(?:^|[\s\n])(?:\d\.\d\.?\s*|\w{2,4}\.\s*)?(ong|ba)\s+([a-z][a-z ]{2,40}?)\s*,\s*sinh\s*n[a-z]m\s*:?\s*(\d{4})/gd;let m;while((m=reP.exec(f)))o.nguoi.push({gt:m[1]==="ba"?"Bà":"Ông",ten:t.slice(m.indices[2][0],m.indices[2][1]).trim(),namsinh:m[3]});
+  const ids=[...f.matchAll(/(\d{12})/g)];ids.forEach((x,i)=>{const seg=t.slice(x.index,x.index+120),dt=dateIn(seg);let noi="";const j=dt?seg.search(/\d{4}/)&&seg.indexOf(":",seg.indexOf(dt.split("/")[2])):-1;
+    const k=seg.search(/\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/);if(k>=0){const rest=seg.slice(k);const mm=/\d{4}\s*,?\s*[^:\n]{0,20}:\s*([^\n]+)/.exec(rest);if(mm)noi=trimJunk(mm[1])}
+    if(!o.nguoi[i])o.nguoi[i]={};Object.assign(o.nguoi[i],{cccd:x[1],ngaycap:dt,noicap:noi})});
+  o.thuongtru=lbl(t,f,"dia chi/tru so chinh");if(!o.thuongtru)o.thuongtru=lbl(t,f,"tru so chinh");
+  o.ngay=signDate(f)||dateWords(f);o.dt_thua=firstNum(lbl(t,f,"dien tich dat"));
+  const l7=/^\s*7\s*[.,)]\s*(.+)$/m.exec(t);const md=l7?l7[1]:lbl(t,f,"su dung vao muc dich");o.muc_dich=trimJunk((md||"").replace(/^[^:]*:\s*/,m=>m.length<60?"":m));
+  o.dt_chuyen=numM((md||"").replace(/^[^:]*:/,""));return o}
+function parseGcn(t){t=t.normalize("NFC");const f=fold(t),o={warn:[]};
+  o.so=V(t,f,/\b([a-z]{1,2}\s?\d{6})\b/).replace(/\s+/g," ").toUpperCase();
+  o.thua=firstNum(lbl(t,f,"thua dat so"));o.to=firstNum(lbl(t,f,"to ban do so"));
+  const ia=fzFind(f,"dien tich",f.indexOf("thua dat")>=0?0:0);o.dt=ia?firstNum(valAfter(t,f,ia.end)):"";
+  const lr=canonLand(lbl(t,f,"muc dich su dung"));o.loaidat=lr.v;if(lr.v&&(!lr.ok||lr.fuzzy))o.warn.push({k:"loaidat",raw:lr.raw,fz:lr.fuzzy});
+  const hs=lbl(t,f,"thoi han su dung");o.hanSD=dateWords(fold(hs),hs)||dmyN(hs)||(/lau dai/.test(fold(hs))?"Lâu dài":clean(hs));
+  o.nguongoc=lbl(t,f,"nguon goc su dung",{cont:1});
+  const ad=fzFind(f,"dia chi");if(ad){let k=ad.end;if(/^\s*thuong/.test(f.slice(k,k+12))){const ad2=fzFind(f,"dia chi",k);if(ad2&&false)k=ad2.end}o.diachi_cu=valAfter(t,f,k)}
   o.ngaycap=signDate(f);
-  const hl=V(tn,f,/thuoc hanh lang[^\n]{0,80}?thay doi thanh\s*([\d.,]+)\s*m/)||V(tn,f,/co\s+([\d.,]+)\s*m\S*\s+thuoc hanh lang/);o.hanhlang=clean(hl);
-  const nt=V(tn,f,/to ban do[^\n]{0,40}?(?:thay doi|chuyen)[^\n]{0,20}?(?:thanh|sang)\s*(?:to ban do)?\s*(?:so)?\s*(\d{1,4})/);if(nt)o.to_moi=nt;
-  o.nguoi=[];let m;const rn=/(ong|ba)\s*:\s*([a-z][a-z ]{2,40}?)\s*(?:\n|nam sinh)/gd,gn=new RegExp(rn.source,rn.flags);while((m=gn.exec(f)))o.nguoi.push({ten:tn.slice(m.indices[2][0],m.indices[2][1]).trim()});
-  o.ghichu=clean(V(tn,f,/nhung thay doi sau khi cap[^\n]*\n([\s\S]{0,500})/));
+  /* hành lang giao thông: số m² nằm gần cụm "hành lang" */
+  const nums=[];for(const m of f.matchAll(/(\d{1,4}[.,]\d{1,2})\s*m/g)){const w=f.slice(Math.max(0,m.index-170),m.index+170);if(/hanh\s*lang/.test(w))nums.push({v:m[1],i:m.index})}
+  if(nums.length){o.hanhlang_cu=nums[0].v;o.hanhlang=nums[nums.length-1].v;if(nums.length===1)o.warn.push({k:"hanhlang",raw:"chỉ thấy 1 số ("+nums[0].v+" m²) – có thể là số cũ trước khi thay đổi"})}
+  const nt=V(t,f,/to ban do[^\n]{0,40}?(?:thay doi|chuyen)[^\n]{0,20}?(?:thanh|sang)\s*(?:to ban do)?\s*(?:so)?\s*(\d{1,4})/);if(nt)o.to_moi=nt;
+  o.nguoi=[];for(const m of f.matchAll(/\b(ong|ba)\s*:\s*([a-z][a-z ]{2,30}?)\s*(?:\n|nam sinh|;|$)/gd))o.nguoi.push({ten:t.slice(m.indices[2][0],m.indices[2][1]).trim()});
+  const cq=/uy ban nhan dan\s+(huyen|quan|thi xa|thanh pho|tinh)\s+([a-z]+(?:\s+[a-z]+){0,2})/d.exec(f);if(cq){const nm=t.slice(cq.indices[2][0],cq.indices[2][1]).split(/\s+/).filter((w,i)=>i<2||/^[A-ZÀ-Ỹ]/.test(w)).slice(0,3).map(w=>w[0].toUpperCase()+w.slice(1).toLowerCase()).join(" ");o.cq="UBND "+({huyen:"huyện",quan:"quận","thi xa":"thị xã","thanh pho":"thành phố",tinh:"tỉnh"})[cq[1]]+" "+nm}
+  const vs=fzFind(f,"so vao so cap gcn")||fzFind(f,"so vao so");if(vs){const v=valAfter(t,f,vs.end);const mm=/^([A-Za-z]{1,3}\s?\d{3,8})/.exec(v);if(mm)o.vaoSo=mm[1].toUpperCase();else o.warn.push({k:"vaoSo",raw:"có dòng “Số vào sổ” nhưng chữ viết tay không đọc được – nhập tay"})}
+  const ts=/trich\s*do\s*dia\s*chinh[^\n]{0,40}?so\s*['’]?\s*(\d{1,5}\s*\/\s*[a-z0-9\-]{3,14})/d.exec(f);if(ts)o.trichSo=t.slice(ts.indices[1][0],ts.indices[1][1]).replace(/\s+/g,"").toUpperCase();
+  const nd2=/lap\s*ngay\s+(\d{1,2})\s*thang\s+(\d{1,2})\s*nam\s+(\d{4})/.exec(f);if(nd2)o.ngDo=`${+nd2[1]}/${+nd2[2]}/${nd2[3]}`;
+  o.ghichu="";
   return o}
-function parseTsdd(t){const tn=t.normalize("NFC"),f=xf(tn);return{nguoi:clean(V(tn,f,/ten to chuc, ca nhan su dung dat[^:\n]*:\s*([^\n]+)/)),nguongoc:clean(V(tn,f,/nguon goc su dung dat\s*:?\s*([^\n]+)/)),
-  loaidat_truoc:clean(V(tn,f,/loai dat truoc khi chuyen muc dich su dung\s*:?\s*([^\n]+)/)),loaidat_sau:clean(V(tn,f,/loai dat sau khi chuyen muc dich su dung\s*:?\s*([^\n]+)/)),
-  dt:clean(V(tn,f,/dien tich nop tien su dung dat[^:\n]*:\s*([\d.,]+)/)),ngay:dateWords(f)}}
-function parseLptb(t){const tn=t.normalize("NFC"),f=xf(tn);return{nguoi:stripGt(clean(V(tn,f,/nguoi nop thue\s*:?\s*([^\n]+)/))),ngaysinh:dmyN(V(tn,f,/nam sinh[\s\S]{0,140}?(\d{1,2}\/\d{1,2}\/\d{4})/)),
-  cccd:V(tn,f,/so dinh danh[^\d\n]{0,40}(\d{12})/),thua:V(tn,f,/thua dat so[^\d\n]{0,40}(\d{1,5})/),to:V(tn,f,/to ban do so\s*:?\s*(\d{1,4})/),
-  nguongoc:clean(V(tn,f,new RegExp("nguon goc nha dat\\s*:?\\s*\\([^)]*\\)\\s*:?\\s*"+NG2))),ngay:dateWords(f),dong:tyleRows(tn,f)}}
-function parsePnn(t){const tn=t.normalize("NFC"),f=xf(tn);return{nguoi:stripGt(clean(V(tn,f,/ho va ten\s*:?\s*([^\n]+)/))),ngaysinh:dmyN(V(tn,f,/nam sinh\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/)),
-  cccd:V(tn,f,/so dinh danh[^\d\n]{0,40}(\d{12})/),thua:V(tn,f,/thua dat so\s*:?\s*(\d{1,5})/),to:V(tn,f,/to ban do so\s*:?\s*(\d{1,4})/),
-  gcn:V(tn,f,/so giay chung nhan\s*:?\s*([a-z]{1,3}\s?\d{4,8})/).toUpperCase(),gcn_ngay:dmyN(V(tn,f,/ngay cap\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/)),
-  dt:clean(V(tn,f,/dien tich\s*:?\s*([\d.,]+)\s*m/)),loaidat:clean(V(tn,f,/loai dat\s*\/?\s*muc dich su dung\s*:?\s*([^\n]+)/)),
-  nguongoc:clean(V(tn,f,new RegExp("nguon goc thua dat\\s*\\([^)]*\\)\\s*:?\\s*"+NG2))),ngay:dateWords(f),dong:tyleRows(tn,f)}}
+function parseTsdd(t){t=t.normalize("NFC");const f=fold(t),o={warn:[]};
+  o.nguoi=stripGt(lbl(t,f,"ca nhan su dung dat"));
+  o.vitri=lbl(t,f,"vi tri thua dat",{cont:1}).replace(/\bVi tri\s*\d+\s*$/i,"").trim();
+  const a=canonLand(lbl(t,f,"loai dat truoc khi chuyen muc dich su dung"));o.loaidat_truoc=a.v;if(a.v&&(!a.ok||a.fuzzy))o.warn.push({k:"loaidat_truoc",raw:a.raw,fz:a.fuzzy});
+  const b=canonLand(lbl(t,f,"loai dat sau khi chuyen muc dich su dung"));o.loaidat_sau=b.v;
+  o.nguongoc=lbl(t,f,"nguon goc su dung dat",{cont:1});o.dt=firstNum(lbl(t,f,"dien tich nop tien su dung dat"));o.ngay=signDate(f);return o}
+function parseLptb(t){t=t.normalize("NFC");const f=fold(t),o={warn:[]};
+  o.nguoi=stripGt(codeVal(t,f,"04")||lbl(t,f,"nguoi nop thue"));
+  o.ngaysinh=dateIn(codeVal(t,f,"05",{next:1,raw:1}))||dateIn((t.slice(f.search(/[\[\(]\s*0?5\s*[\]\)]/))||"").slice(0,220));
+  const c7=codeVal(t,f,"07",{raw:1});o.cccd=(/(\d{12})/.exec(c7)||[])[1]||"";
+  const ph=codeVal(t,f,"11",{raw:1});o.dienthoai=(/(0[\d\s.]{8,12}\d)/.exec(ph)||[])[1]||"";if(o.dienthoai)o.dienthoai=o.dienthoai.replace(/\D/g,"");
+  const th=lbl(t,f,"thua dat so");o.thua=firstNum(th);o.to=firstNum(lbl(t,f,"to ban do so"));
+  o.vitri=lbl(t,f,"vi tri thua dat",{cont:1}).replace(/[,;]?\s*Vi tri\s*\d+\s*$/i,"").trim();
+  o.dt_chuyen=numM(lbl(t,f,"muc dich su dung dat"));
+  o.nguongoc=lbl(t,f,"nguon goc nha dat",{cont:1,span:600});o.ngay=signDate(f);o.dong=dongRows(t);return o}
+function parsePnn(t){t=t.normalize("NFC");const f=fold(t),o={warn:[]};
+  o.nguoi=stripGt(codeVal(t,f,"04")||lbl(t,f,"ho va ten"));o.ngaysinh=dateIn(codeVal(t,f,"05",{raw:1,next:1}));
+  const c7=codeVal(t,f,"07",{raw:1});o.cccd=(/(\d{12})/.exec(c7)||[])[1]||"";
+  const ph=codeVal(t,f,"10",{raw:1});o.dienthoai=((/(0[\d\s.]{8,12}\d)/.exec(ph)||[])[1]||"").replace(/\D/g,"");
+  const g1=codeVal(t,f,"19.1",{raw:1});const gm=/([A-Za-z]{1,3}\s?\d{4,8})/.exec(g1);o.gcn=gm?gm[1].toUpperCase():"";
+  o.gcn_ngay=dateIn(codeVal(t,f,"19.2",{raw:1}));o.thua=firstNum(codeVal(t,f,"19.3",{raw:1}));o.to=firstNum(codeVal(t,f,"19.4",{raw:1}));
+  o.dt=firstNum(codeVal(t,f,"19.5"));const lr=canonLand(codeVal(t,f,"19.6"));o.loaidat=lr.v;
+  o.nguongoc=lbl(t,f,"nguon goc thua dat",{cont:2,span:700});o.ngay=signDate(f);o.dong=dongRows(t);return o}
+
 function xtAnalyze(pages,qrs){const ex={cccd:[]},cnt={};let prev=null;const bag={};
   pages.forEach(p=>{const k=xtClass(p.text||"",prev);p.kind=k;prev=k==="khac"?null:k;cnt[k]=(cnt[k]||0)+1;(bag[k]=bag[k]||[]).push(p.text||"")});
   if(bag.don)ex.don=parseDon(bag.don.join("\n"));if(bag.gcn)ex.gcn=parseGcn(bag.gcn.join("\n"));if(bag.tsdd)ex.tk_tsdd=parseTsdd(bag.tsdd.join("\n"));
@@ -37687,20 +37770,34 @@ function xtStatus(a){const v=a.filter(x=>x[1]!=null&&String(x[1]).trim()!==""),u
 function xtTable(ex,cf){const rows=xtRows(ex);return`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th>Nội dung</th><th>Giá trị theo từng giấy tờ</th><th>Kết quả</th><th>Đã xác nhận</th></tr>${rows.map(([l,a])=>{const r=xtStatus(a);if(r.s==="–")return"";
   const col=r.s==="Lệch"?"var(--err)":r.s==="Khớp"?"var(--ok,#1a7f4b)":"var(--warn)";
   return`<tr><td style="border:1px solid var(--bd);padding:4px">${esc(l)}</td><td style="border:1px solid var(--bd);padding:4px">${r.v.map(x=>`<div><small>${esc(x[0])}:</small> ${esc(x[1])}</div>`).join("")}</td><td style="border:1px solid var(--bd);padding:4px;font-weight:600;color:${col};white-space:nowrap">${r.s}</td><td style="border:1px solid var(--bd);padding:4px;text-align:center"><input type="checkbox" data-cf="${esc(l)}" ${cf[l]?"checked":""}></td></tr>`}).join("")}</table></div>`}
+function xtWarn(ex){const L=[];const M={loaidat:r=>`Loại đất trên GCN đọc là “${r.raw}” – chỉ khớp gần đúng danh mục, kiểm tra`,loaidat_truoc:r=>`Loại đất (tờ khai tiền SDĐ) đọc là “${r.raw}” – chỉ khớp gần đúng danh mục, kiểm tra`,vaoSo:r=>r.raw,hanhlang:r=>"Hành lang giao thông: "+r.raw};
+  ["gcn","tk_tsdd"].forEach(k=>((ex[k]&&ex[k].warn)||[]).forEach(w=>L.push((M[w.k]||(r=>r.raw))(w))));return L.length?`<div class="banner" style="margin:6px 0">${L.map(l=>"⚠ "+esc(l)).join("<br>")}</div>`:""}
 /* ---- ghi vào hồ sơ (qua bước duyệt) ---- */
 function xtTargets(ex,c){const d=ex.don||{},g=ex.gcn||{},ts=ex.tk_tsdd||{},tl=ex.tk_lptb||{},tp=ex.tk_pnn||{},C=ex.cccd||[],dn=(d.nguoi||[]).length?d.nguoi:C.map(x=>({ten:x.ten,cccd:x.so,gt:x.gt})),out=[];
-  const ad=addrSplit(d.thuongtru||"");
-  dn.forEach((n,i)=>{const cd=C.find(x=>x.so===n.cccd||(x.ten&&n.ten&&key(x.ten)===key(n.ten)))||{},dt=i===0?(cd.ngaysinh||dmy2iso(tp.ngaysinh)||dmy2iso(tl.ngaysinh)):cd.ngaysinh;
-    const f={hoTen:n.ten?titleCase(n.ten):"",gt:n.gt||cd.gt||"",ngaySinh:/^\d{4}-/.test(dt||"")?dt:dmy2iso(dt),cccd:n.cccd||cd.so||"",cccdLoai:(n.cccd||cd.so)?"CCCD số":"",cccdNgay:(cd.ngaycap&&/^\d{4}-/.test(cd.ngaycap)?cd.ngaycap:dmy2iso(cd.ngaycap))||dmy2iso(n.ngaycap),noiCap:n.noicap||"",thon:ad.thon||""};
-    out.push({kind:"p",title:`Người ${i+1}: ${f.hoTen||"?"}`,f})});
-  const lh=g.loaidat||ts.loaidat_truoc||"",pf={to:g.to_moi||tl.to||tp.to||g.to||"",thua:g.thua||tl.thua||tp.thua||"",dt:g.dt||d.dt_thua||"",loai:lh?cap(lh.toLowerCase()):"",gcn:g.so||tp.gcn||"",gcnNgay:dmy2iso(g.ngaycap||tp.gcn_ngay),thoiHan:g.hanSD?"Đến ngày "+g.hanSD:"",nguonGoc:g.nguongoc||ts.nguongoc||""};
-  out.push({kind:"q",title:"Thửa đất",f:pf});
-  const ty=(tp.dong&&tp.dong.length>1?tp.dong:tl.dong&&tl.dong.length>1?tl.dong:[]).map(x=>x.tyle).join(" – "),ds=num(d.dt_chuyen||ts.dt||"");
-  out.push({kind:"c",title:"Tab 6 · Chuyển mục đích",f:{dt_chuyen:d.dt_chuyen||ts.dt||"",ty_le:ty,ng_tk:ts.nguongoc||tp.nguongoc||tl.nguongoc||"",hanh_lang:g.hanhlang||"",han_sd:g.hanSD||"",loai_sau:/do thi/i.test(fold(d.muc_dich||""))?"đất ở tại đô thị":(d.muc_dich?"đất ở tại nông thôn":"")}});
+  const bestOf=(L,raw)=>{const r=cmpk(raw);if(!r||!(L||[]).length)return raw;let b=null;L.forEach(n=>{const k=cmpk(n),d=lev(r,k,99),s=1-d/Math.max(k.length,r.length);if(!b||s>b.s)b={n,s}});return b&&b.s>=.72?b.n:raw};
+  const ad=addrSplit(d.thuongtru||""),ISO=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")?v:dmy2iso(v);
+  dn.forEach((n,i)=>{const cd=C.find(x=>x.so===n.cccd||(x.ten&&n.ten&&key(x.ten)===key(n.ten)))||{},dt=i===0?(cd.ngaysinh||tp.ngaysinh||tl.ngaysinh):cd.ngaysinh,w={};
+    const f={hoTen:n.ten?titleCase(n.ten):"",gt:n.gt||cd.gt||"",ngaySinh:ISO(dt),cccd:n.cccd||cd.so||"",cccdLoai:(n.cccd||cd.so)?"CCCD số":"",cccdNgay:ISO(cd.ngaycap)||ISO(n.ngaycap),noiCap:bestOf((DB.settings||{}).noiCap,n.noicap||""),thon:ad.thon||"",dt_phone:i===0?(tl.dienthoai||tp.dienthoai||""):""};
+    if(f.ngaySinh&&i===0&&tl.ngaysinh&&tp.ngaysinh&&dmy2iso(tl.ngaysinh)!==dmy2iso(tp.ngaysinh))w.ngaySinh="Tờ khai trước bạ ghi "+tl.ngaysinh+", tờ khai PNN ghi "+tp.ngaysinh+" – đối chiếu CCCD";
+    out.push({kind:"p",title:`Người ${i+1}: ${f.hoTen||"?"}`,f,w})});
+  const lc=canonLand(g.loaidat||ts.loaidat_truoc||""),lh=lc.v,toGcn=g.to||"",toNew=g.to_moi||tl.to||tp.to||g.to||"",w2={};
+  const pf={to:toNew,thua:g.thua||tl.thua||tp.thua||"",dt:g.dt||d.dt_thua||"",loai:lh,gcn:g.so||tp.gcn||"",gcnNgay:ISO(g.ngaycap||tp.gcn_ngay),thoiHan:g.hanSD?(/\d\//.test(g.hanSD)?"Đến ngày "+g.hanSD:g.hanSD):"",nguonGoc:g.nguongoc||ts.nguongoc||tl.nguongoc||"",
+    vaoSo:g.vaoSo||"",gcnCq:g.cq||"",gcnDt:g.dt||"",loaiGcn:canonLand(g.loaidat||"").v,gcnDc:g.diachi_cu||"",toCu:(toGcn&&toNew&&toGcn!==toNew)?toGcn:"",trichSo:g.trichSo||"",ngDo:ISO(g.ngDo),viTriLptb:tl.vitri||ts.vitri||""};
+  if(lh&&(!lc.ok||lc.fuzzy))w2.loai="Chữ OCR “"+(lc.raw||"")+"” chỉ khớp gần đúng với danh mục – kiểm tra";
+  if(g.warn&&g.warn.some(x=>x.k==="vaoSo"))w2.vaoSo="Có dòng này trên GCN nhưng chữ viết tay không đọc được – nhập tay";
+  if(pf.toCu)w2.toCu="GCN ghi tờ "+toGcn+", tờ khai ghi tờ "+toNew+" (đã đổi tờ) – kiểm tra mục IV của GCN";
+  out.push({kind:"q",title:"Thửa đất",f:pf,w:w2});
+  const people=dn.filter(n=>n.cccd),rowsT=[...(tp.dong||[]),...(tl.dong||[])],ty=people.map(n=>{const r=rowsT.find(x=>x.cccd===n.cccd&&x.tyle);return r?num(r.tyle):null});let tyle="",wc={};
+  if(people.length&&ty.every(v=>v!=null))tyle=ty.map(v=>v+"%").join(" – ");
+  else if(people.length&&ty.filter(v=>v==null).length===1){const sum=ty.reduce((s,v)=>s+(v||0),0);if(sum>0&&sum<100){ty[ty.indexOf(null)]=100-sum;tyle=ty.map(v=>v+"%").join(" – ");wc.ty_le="Suy ra (100% trừ tỷ lệ đã đọc được) – kiểm tra"}}
+  const dtc=d.dt_chuyen||ts.dt||tl.dt_chuyen||tp.dt||"";if(dtc&&!d.dt_chuyen)wc.dt_chuyen="Không đọc được từ đơn – lấy từ tờ khai";
+  const hl=g.hanhlang||"";if(hl&&g.warn&&g.warn.some(x=>x.k==="hanhlang"))wc.hanh_lang="Chỉ thấy một số trên GCN – có thể là số cũ";
+  const dcc=(()=>{const p=(g.diachi_cu||"").split(",").map(x=>x.trim());return p.length>=2&&p[0]&&p[1]?`${p[0][0].toLowerCase()+p[0].slice(1)} ${p[1]} cũ`:""})();
+  out.push({kind:"c",title:"Tab 6 · Chuyển mục đích",f:{dt_chuyen:dtc,ty_le:tyle,ng_tk:ts.nguongoc||tp.nguongoc||tl.nguongoc||"",hanh_lang:hl,han_sd:/^\d/.test(g.hanSD||"")?g.hanSD:"",loai_sau:/do thi/i.test(fold(d.muc_dich||""))?"đất ở tại đô thị":(d.muc_dich||dtc?"đất ở tại nông thôn":""),dc_cu:dcc},w:wc});
   return out}
 const XL={hoTen:"Họ và tên",gt:"Ông/Bà",ngaySinh:"Ngày sinh",cccd:"Số giấy tờ",cccdLoai:"Loại giấy tờ",cccdNgay:"Ngày cấp",noiCap:"Nơi cấp",thon:"Thôn",xa:"Xã",tp:"Tỉnh/TP",
  to:"Tờ bản đồ số",thua:"Thửa đất số",dt:"Diện tích thửa (m²)",loai:"Loại đất hiện trạng",gcn:"Số GCN",gcnNgay:"Ngày cấp GCN",thoiHan:"Thời hạn sử dụng",nguonGoc:"Nguồn gốc sử dụng đất",
- dt_chuyen:"Diện tích chuyển (m²)",ty_le:"Tỷ lệ sử dụng",ng_tk:"Nguồn gốc theo tờ khai",hanh_lang:"Hành lang giao thông (m²)",han_sd:"Hạn sử dụng đất",loai_sau:"Loại đất sau chuyển"};
+ dt_chuyen:"Diện tích chuyển (m²)",ty_le:"Tỷ lệ sử dụng",ng_tk:"Nguồn gốc theo tờ khai",hanh_lang:"Hành lang giao thông (m²)",han_sd:"Hạn sử dụng đất",loai_sau:"Loại đất sau chuyển",dc_cu:"Địa chỉ cũ trên GCN",dt_phone:"Điện thoại",vaoSo:"Số vào sổ cấp GCN",gcnCq:"Cơ quan cấp GCN",gcnDt:"Diện tích ghi trên GCN (m²)",loaiGcn:"Mục đích ghi trên GCN",gcnDc:"Địa chỉ thửa đất trên GCN",toCu:"Tờ bản đồ cũ (theo GCN)",trichSo:"Số trích đo (GCN)",ngDo:"Ngày lập trích đo",viTriLptb:"Vị trí thửa đất (tờ khai)"};
 async function xtApply(ex){const c=cur(),T=xtTargets(ex,c);
   const popts=def=>c.people.map(p=>`<option value="${p.id}"${p.id===def?" selected":""}>${esc(p.hoTen||"(chưa nhập tên)")}</option>`).join("")+`<option value="__new"${def==="__new"?" selected":""}>➕ Thêm người mới</option>`;
   const qopts=def=>c.parcels.map(q=>`<option value="${q.id}"${q.id===def?" selected":""}>tờ ${esc(q.to||"?")} / thửa ${esc(q.thua||"?")}</option>`).join("")+`<option value="__new"${def==="__new"?" selected":""}>➕ Thêm thửa mới</option>`;
@@ -37708,34 +37805,40 @@ async function xtApply(ex){const c=cur(),T=xtTargets(ex,c);
   const html=T.map((t,n)=>{const ks=Object.keys(t.f).filter(k=>t.f[k]);if(!ks.length)return"";
     const fr=a=>a.find(x=>!used.has(x.id));const ex1=t.kind==="p"?(c.people.find(p=>t.f.cccd&&p.cccd===t.f.cccd&&!used.has(p.id))||fr(c.people.filter(p=>!p.hoTen&&!p.cccd))):t.kind==="q"?(c.parcels.find(q=>t.f.thua&&q.thua===t.f.thua&&!used.has(q.id))||fr(c.parcels.filter(q=>!q.thua&&!q.to))):null,def=ex1?ex1.id:"__new";if(ex1)used.add(ex1.id);
     return`<div class="card" data-n="${n}"><b>${esc(t.title)}</b>${t.kind==="c"?"":` · điền vào: <select class="rt">${t.kind==="p"?popts(def):qopts(def)}</select>`}
-    <table style="width:100%;margin-top:6px">${ks.map(k=>`<tr><td><input type="checkbox" data-k="${k}" checked></td><td style="white-space:nowrap">${XL[k]||k}</td><td><input data-v="${k}" type="${["ngaySinh","cccdNgay","gcnNgay"].includes(k)?"date":"text"}" value="${esc(t.f[k])}" style="width:100%"></td><td class="wn" style="color:var(--warn);font-size:12px"></td></tr>`).join("")}</table></div>`}).join("");
+    <table style="width:100%;margin-top:6px">${ks.map(k=>`<tr><td><input type="checkbox" data-k="${k}" checked></td><td style="white-space:nowrap">${XL[k]||k}</td><td><input data-v="${k}" type="${["ngaySinh","cccdNgay","gcnNgay","ngDo"].includes(k)?"date":"text"}" value="${esc(t.f[k])}" style="width:100%"></td><td class="wn" style="color:var(--warn);font-size:12px"></td></tr>`).join("")}</table></div>`}).join("");
   const tgt=(box,t)=>t.kind==="c"?(c.tabs.chuyenmd=c.tabs.chuyenmd||{}):(t.kind==="q"?c.parcels:c.people).find(x=>x.id===$(".rt",box).value)||{};
-  const oldv=(t,p,k)=>t.kind==="q"&&k==="dt"?(p.lands&&p.lands[0]&&p.lands[0].dt):t.kind==="q"&&k==="loai"?(p.lands&&p.lands[0]&&p.lands[0].ten):t.kind==="q"&&k==="thoiHan"?(p.lands&&p.lands[0]&&p.lands[0].thoiHan):p[k];
-  const mark=()=>$$(".card[data-n]",$("#ov")).forEach(box=>{const t=T[+box.dataset.n],p=tgt(box,t);$$("tr",box).forEach(tr=>{const k=$("[data-k]",tr).dataset.k,v=$("[data-v]",tr).value,o=oldv(t,p,k),diff=o&&String(o)!==v;$(".wn",tr).textContent=diff?"⚠ ghi đè: "+o:"";if(box.dataset.init!=="1")$("[data-k]",tr).checked=!diff});box.dataset.init="1"});
+  const oldv=(t,p,k)=>k==="dt_phone"?p.dt:t.kind==="q"&&k==="dt"?(p.lands&&p.lands[0]&&p.lands[0].dt):t.kind==="q"&&k==="loai"?(p.lands&&p.lands[0]&&p.lands[0].ten):t.kind==="q"&&k==="thoiHan"?(p.lands&&p.lands[0]&&p.lands[0].thoiHan):p[k];
+  const mark=()=>$$(".card[data-n]",$("#ov")).forEach(box=>{const t=T[+box.dataset.n],p=tgt(box,t);$$("tr",box).forEach(tr=>{const k=$("[data-k]",tr).dataset.k,v=$("[data-v]",tr).value,o=oldv(t,p,k),diff=o&&String(o)!==v;$(".wn",tr).textContent=((t.w&&t.w[k])?"⚠ "+t.w[k]+(diff?" · ":""):"")+(diff?"⚠ ghi đè: "+o:"");if(box.dataset.init!=="1")$("[data-k]",tr).checked=!diff});box.dataset.init="1"});
   if(!html.trim()){await modal(`<p><b>Chưa có trường nào để điền.</b></p><p>App chưa đọc được thông tin nào từ các trang (ảnh mờ, bị lệch/xoay, hoặc OCR chưa chạy). Mở mục “Chữ app đọc được từng trang” để xem app thấy gì, hoặc nhập tay ở tab 1 · Data.</p>`);return false}
   const pr=modal(`<p><b>Duyệt dữ liệu đọc từ hồ sơ</b><br><small>Kiểm tra từng dòng, sửa nếu sai, bỏ tick dòng không muốn điền. Dòng ⚠ sẽ ghi đè dữ liệu đã nhập; dòng đã có sẵn và giống nhau được bỏ tick.</small></p>${html}`,[["Hủy",0],["✔ Điền vào hồ sơ",1,"pri"]]);
   setTimeout(()=>{mark();$$(".rt",$("#ov")).forEach(x=>x.onchange=()=>{const b=x.closest(".card");b.dataset.init="";$$("[data-k]",b).forEach(i=>i.checked=true);mark()})},0);
   if(!(await pr))return false;let n=0;
   $$(".card[data-n]",$("#ov")).forEach(box=>{const t=T[+box.dataset.n];let p=tgt(box,t);if(!p.id&&t.kind!=="c"){p=t.kind==="q"?newParcel():newPerson("nsd");(t.kind==="q"?c.parcels:c.people).push(p)}
     $$("tr",box).forEach(tr=>{const k=$("[data-k]",tr).dataset.k,v=$("[data-v]",tr).value;if(!$("[data-k]",tr).checked||!v)return;n++;
-      if(t.kind==="q"&&(k==="dt"||k==="loai"||k==="thoiHan")){p.lands=p.lands&&p.lands.length?p.lands:[{ten:"",dt:"",thoiHan:""}];p.lands[0][k==="dt"?"dt":k==="loai"?"ten":"thoiHan"]=v}else p[k]=v})});
+      if(k==="dt_phone"&&t.kind==="p"){p.dt=v}else if(t.kind==="q"&&(k==="dt"||k==="loai"||k==="thoiHan")){p.lands=p.lands&&p.lands.length?p.lands:[{ten:"",dt:"",thoiHan:""}];p.lands[0][k==="dt"?"dt":k==="loai"?"ten":"thoiHan"]=v}else p[k]=v})});
   save();flush();renderBar();toast(`✔ Đã điền ${n} trường – kiểm tra lại ở tab 1 · Data và tab 6 · Chuyển mục đích.`);return true}
 /* ---- giao diện trong tab Tệp & trích xuất ---- */
 function xtShow(v){const c=cur(),x=c.tabs.xt,box=$("#xtRes",v);if(!box)return;
   if(!x||!x.ex){box.innerHTML="<p style=\"color:var(--mu)\">Chưa có kết quả đọc. Tải tệp hồ sơ rồi bấm “Đọc tất cả tệp”.</p>";return}
   const cn=x.ex.cnt||{},L={don:"đơn",gcn:"GCN",tsdd:"tờ khai tiền SDĐ",lptb:"tờ khai trước bạ",pnn:"tờ khai PNN",cccd:"CCCD",khac:"trang khác"};
   box.innerHTML=`<p style="margin:6px 0">${x.paste?"Đã nạp kết quả dán vào":`Đã đọc ${x.stat?x.stat.pages:"?"} trang${x.stat&&x.stat.ocr?` (OCR ${x.stat.ocr} trang)`:""}`} lúc ${new Date(x.at).toLocaleString("vi-VN")}: ${Object.entries(cn).map(([k,n])=>`${n} ${L[k]||k}`).join(", ")||"không nhận dạng được trang nào"}. CCCD đọc được: ${(x.ex.cccd||[]).length} (QR/chữ).</p>
+  ${x.dbg&&x.dbg.length&&x.dbg.every(p=>!p.t)?`<div class="banner" style="margin:6px 0;border-left:4px solid var(--err)"><b>Tất cả ${x.dbg.length} trang đều chưa có chữ</b> – OCR chưa chạy được trong cách bạn đang mở app (thường do mở trong khung xem trước của Claude, hoặc chưa tải được dữ liệu OCR). Hãy mở app từ GitHub Pages / mở file index.html trên máy bằng Chrome-Edge, hoặc dùng nút “Dán kết quả đọc (JSON)”.</div>`:""}
+  ${xtWarn(x.ex)}
   ${Object.keys(cn).some(k=>k!=="khac")?"":`<div class="banner" style="margin:6px 0">Chưa nhận dạng được loại giấy tờ nào: ảnh có thể mờ, bị lệch/xoay, hoặc OCR chưa chạy. Thử scan lại rõ hơn (≥200 dpi) hoặc nhập tay ở tab 1 · Data.</div>`}
   ${xtTable(x.ex,x.cf||{})}<div class="ch" style="margin-top:8px"><button id="xtApply">✔ Điền vào hồ sơ…</button><button class="s" id="xtClr">Xóa kết quả</button></div>
-  ${x.dbg?`<details style="margin-top:8px"><summary>🔍 Chữ app đọc được từng trang (xem khi điền sai/thiếu)</summary><p style="color:var(--mu);font-size:12px;margin:4px 0">Mã QR đọc được: ${x.qr||0}. Nếu chữ ở đây sai nhiều hoặc trống thì lỗi nằm ở bước nhận dạng chữ (ảnh mờ, lệch, OCR chưa chạy), không phải ở bước điền.</p>${x.dbg.map(p=>`<div style="margin:6px 0"><b>${esc(p.f)} – trang ${p.n}</b> · loại: <b>${esc(({don:"đơn",gcn:"GCN",tsdd:"tờ khai tiền SDĐ",lptb:"tờ khai trước bạ",pnn:"tờ khai PNN",cccd:"CCCD",khac:"chưa nhận dạng"})[p.k]||p.k)}</b> · ${p.o?"OCR":"chữ trong PDF"}<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;background:var(--bg);border:1px solid var(--bd);padding:6px;margin:3px 0">${esc(p.t||"(trống)")}</pre></div>`).join("")}</details>`:""}
+  ${x.dbg?`<details style="margin-top:8px"><summary>🔍 Chữ app đọc được từng trang (xem khi điền sai/thiếu)</summary><p style="color:var(--mu);font-size:12px;margin:4px 0">Mã QR đọc được: ${x.qr||0}. Nếu chữ ở đây sai nhiều hoặc trống thì lỗi nằm ở bước nhận dạng chữ (ảnh mờ, lệch, OCR chưa chạy), không phải ở bước điền.</p>${x.dbg.map(p=>`<div style="margin:6px 0"><b>${esc(p.f)} – trang ${p.n}</b> · loại: <b>${esc(({don:"đơn",gcn:"GCN",tsdd:"tờ khai tiền SDĐ",lptb:"tờ khai trước bạ",pnn:"tờ khai PNN",cccd:"CCCD",khac:"chưa nhận dạng"})[p.k]||p.k)}</b> · ${p.t?(p.o?"OCR":"chữ trong PDF"):"<span style=\"color:var(--err)\">không có chữ</span>"}<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;background:var(--bg);border:1px solid var(--bd);padding:6px;margin:3px 0">${esc(p.t||"(không có chữ – OCR chưa chạy hoặc trang chỉ là ảnh)")}</pre></div>`).join("")}</details>`:""}
   <p style="color:var(--mu);font-size:12px;margin:6px 0 0">Chữ viết tay (nhất là ghi chú biến động ở mục IV của GCN) và ảnh mờ có thể đọc sai hoặc bị bỏ trống – hãy đối chiếu bản gốc, nhập thêm ở tab 1 · Data và tab 6.</p>${x.ex.gcn&&x.ex.gcn.ghichu?`<div class="banner" style="margin-top:6px">Ghi chú biến động trên GCN (nhận dạng thô): ${esc(x.ex.gcn.ghichu)}</div>`:""}`;
   box.onchange=e=>{const k=e.target.dataset&&e.target.dataset.cf;if(k!=null){x.cf=x.cf||{};x.cf[k]=e.target.checked;save()}};
   $("#xtApply",box).onclick=async()=>{try{if(await xtApply(x.ex))showTab("files")}catch(e){await modal(`<p><b>Không điền được vào hồ sơ</b></p><p>${esc(e.message||e)}</p><p><small>Chụp màn hình khung này cùng mục “Chữ app đọc được từng trang” gửi cho người hỗ trợ.</small></p>`)}};
   $("#xtClr",box).onclick=async()=>{if(await ask("Xóa kết quả đọc hồ sơ này?")){delete c.tabs.xt;save();xtShow(v)}}}
 async function renderFilesPlus(v){await renderFiles(v);const first=v.firstElementChild;if(!first)return;
-  const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="ch"><h2>🧩 Đọc toàn bộ hồ sơ và đối chiếu</h2><span><button id="xtGo">▶ Đọc tất cả tệp</button> <button class="s" id="xtPaste">📋 Dán kết quả đọc (JSON)</button></span></div>
+  const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="ch"><h2>🧩 Đọc toàn bộ hồ sơ và đối chiếu</h2><span><button id="xtGo">▶ Đọc tất cả tệp</button> <button class="s" id="xtPaste">📋 Dán kết quả đọc (JSON)</button> <button class="s" id="xtChk">🩺 Kiểm tra kết nối OCR</button></span></div>
   <p style="color:var(--mu);margin:0 0 6px">Đọc mọi tệp của hồ sơ này (đơn, GCN, CCCD, tờ khai…), tự nhận dạng loại giấy tờ, bỏ trang trắng, rồi đối chiếu thông tin giữa các giấy tờ. Chạy ngay trên máy, không gửi dữ liệu đi đâu. Trang scan phải qua OCR nên có thể mất vài phút.</p>
-  <div id="xtMsg" style="color:var(--mu);margin:4px 0"></div><div id="xtRes"></div>`;first.after(d);xtShow(v);
+  <div id="xtMsg" style="color:var(--mu);margin:4px 0;white-space:pre-wrap"></div><div id="xtRes"></div>`;first.after(d);xtShow(v);
+  $("#xtChk",v).onclick=async()=>{const m=$("#xtMsg",v),b=$("#xtChk",v);b.disabled=true;m.textContent="Đang kiểm tra kết nối tới các nguồn OCR (tối đa vài chục giây)…";
+    try{const r=await ocrCheck();m.textContent="";const txt=r.env.join("\n")+"\n\n"+r.rows.map(x=>`${x[0]} · ${x[1]}: ${x[2]} (${x[3]} ms)`).join("\n");
+      await modal(`<p><b>Kết quả kiểm tra kết nối OCR</b></p><div style="overflow:auto"><table style="width:100%;font-size:12px"><tr><th>Nguồn</th><th>Tệp</th><th>Kết quả</th><th>ms</th></tr>${r.rows.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td style="font-weight:600;color:${x[2]==="OK"?"var(--ok,#1a7f4b)":"var(--err)"}">${esc(x[2])}</td><td>${x[3]}</td></tr>`).join("")}</table></div><p style="margin-top:8px;color:var(--mu)">Chép đoạn dưới đây gửi người hỗ trợ nếu OCR vẫn lỗi:</p><textarea rows="8" style="width:100%;font-family:monospace;font-size:11px" readonly>${esc(txt)}</textarea>`)}
+    catch(e){m.textContent="Không kiểm tra được: "+((e&&e.message)||e)}finally{b.disabled=false}};
   $("#xtPaste",v).onclick=async()=>{const r=await modal(`<p><b>Dán kết quả đọc hồ sơ (JSON)</b><br><small>Dùng khi OCR không chạy được (ví dụ mở trong khung xem trước của Claude). Gửi hồ sơ cho Claude trong cuộc trò chuyện, nhờ trích “theo định dạng của app”, rồi dán nội dung vào đây.</small></p><textarea id="xtJ" rows="12" style="width:100%;font-family:monospace;font-size:12px" placeholder='{"don":{...},"gcn":{...},"cccd":[...],"tk_tsdd":{...},"tk_lptb":{...},"tk_pnn":{...}}'></textarea>`,[["Hủy",0],["Nạp kết quả",1,"pri"]]);
     if(!r)return;let ex;try{ex=JSON.parse($("#xtJ",$("#ov")).value.trim())}catch(e){await modal("<p><b>Nội dung không phải JSON hợp lệ.</b> Hãy sao chép đủ từ dấu { đầu tiên đến dấu } cuối cùng.</p>");return}
     const ks=["don","gcn","tk_tsdd","tk_lptb","tk_pnn"].filter(k=>ex[k]&&typeof ex[k]==="object");if(!ks.length&&!(ex.cccd&&ex.cccd.length)){await modal("<p><b>Không thấy dữ liệu nào</b> (cần ít nhất một trong: don, gcn, cccd, tk_tsdd, tk_lptb, tk_pnn).</p>");return}
@@ -37744,13 +37847,13 @@ async function renderFilesPlus(v){await renderFiles(v);const first=v.firstElemen
   $("#xtGo",v).onclick=async()=>{const m=$("#xtMsg",v),b=$("#xtGo",v),c=cur();b.disabled=true;const say=t=>m.textContent=t;
     try{const recs=(await IDB.all()).filter(r=>r.caseId===c.id).sort((a,b)=>a.added-b.added);if(!recs.length){m.textContent="Chưa có tệp nào – tải tệp lên trước.";return}
       const pages=[],qrs=[];for(const r of recs)await pagesOf(r,say,pages,qrs);if(!pages.length)throw new Error("Không tìm thấy trang nào có nội dung.");
-      let ocr=0,note="";try{ocr=await ocrPages(pages,say)}catch(e){note="OCR không chạy được: "+ocrMsg(e)+" – vẫn xử lý các trang có chữ và mã QR. Có thể dùng nút “📋 Dán kết quả đọc (JSON)”."}
+      let ocr=0,note="";try{ocr=await ocrPages(pages,say)}catch(e){note="OCR không chạy được:\n"+((e&&e.message)||e)+"\n– Vẫn xử lý các trang có chữ và mã QR. Bấm “🩺 Kiểm tra kết nối OCR” để biết nguồn nào bị chặn."}
       const ex=xtAnalyze(pages,qrs);c.tabs.xt={ex,at:Date.now(),stat:{pages:pages.length,ocr},cf:{},dbg:pages.map(p=>({f:p.file,n:p.n,k:p.kind,o:p.ocr?1:0,t:(p.text||"").slice(0,1200)})),qr:qrs.length};save();flush();
       m.textContent=note;xtShow(v)}
     catch(e){m.textContent="";await modal(`<p><b>Không đọc được hồ sơ</b></p><p>${esc(e.message||e)}</p>`)}
     finally{b.disabled=false}}}
 
-window.__XT={pagesOf,ocrPages,xtClass,parseDon,parseGcn,parseTsdd,parseLptb,parsePnn,xtAnalyze,xtRows,xtStatus,xtTargets,pgText};
+window.__XT={canonLand,fzFind,fold,pagesOf,ocrPages,xtClass,parseDon,parseGcn,parseTsdd,parseLptb,parsePnn,xtAnalyze,xtRows,xtStatus,xtTargets,pgText};
 
 TABS.push(["files","8 · Tệp & trích xuất",renderFilesPlus]);
 $("#ver").textContent="v1.2.1 (19/11/2026)";
@@ -37791,7 +37894,7 @@ function layoutTwo(root,cfg){const c=cur(),kids=[...root.children],data=kids.fin
   tb.onclick=()=>setT(!wrap.classList.contains("tc"));setT(ls.get("hs_sum")==="1");
   const h=$("h2",data);if(h)h.textContent="Tóm tắt hồ sơ";}
 const _rft=renderFormTab;renderFormTab=function(root,cfg){_rft(root,cfg);layoutTwo(root,cfg)};
-$("#ver").textContent="v1.7.0 (21/11/2026) – đọc toàn bộ hồ sơ, đối chiếu, tab Chuyển mục đích";
+$("#ver").textContent="v1.8.1 (21/11/2026) – đọc hồ sơ chịu lỗi OCR, thêm trường GCN, OCR nhiều nguồn + kiểm tra kết nối";
 
 /* ================= khởi động ================= */
 load();refreshLists();renderBar();showTab(tab);flush();bkStat();lockScreen();
